@@ -1,11 +1,5 @@
 'use strict';
-/*
- * Krypto im Browser (Web Crypto API)
- *  PBKDF2-SHA-256 (600.000 Runden) erzeugt 512 Bit aus dem Passwort:
- *    – erste Hälfte  -> Anmelde-Nachweis (Server sieht nur dessen Hash)
- *    – zweite Hälfte -> AES-256-GCM-Schlüssel für die Notizen (verlässt NIE den Browser)
- *  So kann selbst der Server die Notizen nicht lesen.
- */
+
 const VaultCrypto = (() => {
   const te = new TextEncoder(), td = new TextDecoder();
   const AAD = te.encode('vault-v2');
@@ -14,7 +8,7 @@ const VaultCrypto = (() => {
   const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
   async function derive(password, saltB64, iter) {
-    if (!(iter >= 600000)) iter = 600000; // nie schwächer
+    if (!(iter >= 600000)) iter = 600000;
     const base = await crypto.subtle.importKey('raw', te.encode(password), 'PBKDF2', false, ['deriveBits']);
     const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unb64(saltB64), iterations: iter }, base, 512));
     const auth = b64(bits.slice(0, 32));
@@ -36,7 +30,6 @@ const VaultCrypto = (() => {
 
   const newSalt = () => b64(crypto.getRandomValues(new Uint8Array(16)));
 
-  // Proof-of-Work: kostet einen Browser ~1–3 s, macht massenhaftes Durchprobieren durch Bots teuer
   async function solvePow(challenge, bits, onProgress) {
     const full = bits >> 3, rest = bits & 7, mask = rest ? (0xff << (8 - rest)) & 0xff : 0;
     const ok = (h) => { for (let i = 0; i < full; i++) if (h[i] !== 0) return false; return !rest || (h[full] & mask) === 0; };

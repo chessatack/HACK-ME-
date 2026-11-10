@@ -1,6 +1,6 @@
 'use strict';
-// Service Worker: macht die Seite offline-fähig.
-const CACHE = 'site-v5';
+
+const CACHE = 'site-v7';
 const ASSETS = [
   './', 'index.html', 'admin.html', '404.html',
   'datenschutz.html', 'impressum.html',
@@ -23,15 +23,13 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== self.location.origin) return; // Fremdes nie anfassen
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  // Seiten: Netz zuerst, dann Cache
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).catch(async () => (await caches.match(req)) || caches.match('index.html')));
     return;
   }
 
-  // Dateien: Cache zuerst, im Hintergrund aktualisieren
   e.respondWith(
     caches.match(req).then((hit) => {
       const net = fetch(req).then((res) => {

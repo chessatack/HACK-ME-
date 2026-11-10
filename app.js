@@ -1,14 +1,12 @@
 'use strict';
 (() => {
-  // Clickjacking-Schutz (GitHub Pages kann keine Sicherheits-Header senden)
+
   if (window.top !== window.self) {
     document.documentElement.hidden = true;
-    try { window.top.location = window.self.location; } catch { /* blockiert */ }
+    try { window.top.location = window.self.location; } catch {  }
     return;
   }
 
-  // Mirror-Schutz: läuft die Seite auf einer fremden Adresse (Kopie), wird sie gesperrt
-  // und der Besucher zur echten Seite geschickt.
   const HOME = (typeof SITE_CONFIG !== 'undefined' && /^https:\/\/[a-z0-9.-]+$/i.test(SITE_CONFIG.SITE) && !SITE_CONFIG.SITE.includes('deinname')) ? SITE_CONFIG.SITE : null;
   if (HOME && location.origin !== HOME && location.protocol !== 'file:' && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
     document.documentElement.hidden = true;
@@ -16,9 +14,34 @@
     return;
   }
 
+  const OK_KEY = 'pg_ok';
+  const root = document.documentElement;
+  let opened = false;
+  try { opened = sessionStorage.getItem(OK_KEY) === '1'; } catch { }
+  function openPage() {
+    if (opened && root.classList.contains('ok')) return;
+    opened = true; root.classList.add('ok');
+    try { sessionStorage.setItem(OK_KEY, '1'); } catch { }
+  }
+  if (opened) root.classList.add('ok');
+  else {
+    const onKey = (e) => {
+      const k = e.key || '';
+      if (k.length === 1 && (k.toLowerCase().charCodeAt(0) ^ 0x5a) === 0x32) { openPage(); removeEventListener('keydown', onKey, true); }
+    };
+    addEventListener('keydown', onKey, true);
+    let hold = null;
+    addEventListener('touchstart', () => { clearTimeout(hold); hold = setTimeout(openPage, 2000); }, { passive: true });
+    ['touchend', 'touchcancel', 'touchmove'].forEach((ev) => addEventListener(ev, () => clearTimeout(hold), { passive: true }));
+    setTimeout(() => {
+      if (opened) return;
+      root.replaceChildren();
+      try { location.replace('about:blank'); } catch { }
+    }, 5000);
+  }
+
   const API = (typeof SITE_CONFIG !== 'undefined' && /^https:\/\/[a-z0-9.-]+\.supabase\.co\/functions\/v1\/[a-z0-9_-]+$/i.test(SITE_CONFIG.API) && !SITE_CONFIG.API.includes('DEIN-')) ? SITE_CONFIG.API : null;
 
-  // Besuch melden (einmal pro Seitenaufruf). Server zählt + begrenzt Spam.
   function track() {
     if (!API || navigator.webdriver) return;
     fetch(API + '/hit', {
@@ -35,7 +58,6 @@
     }).catch(() => {});
   }
 
-  // Gesperrte Besucher: Inhalt ausblenden, nur Sperrhinweis zeigen
   function showBlocked() {
     document.querySelectorAll('body > *:not(.aurora):not(.grid-bg)').forEach((e) => { e.hidden = true; });
     const box = document.createElement('main'); box.className = 'login-wrap';
@@ -45,6 +67,40 @@
     card.append(h, p); box.append(card); document.body.append(box);
   }
 
+  let devLocked = false;
+  function devtoolsDetected() {
+    if (devLocked) return; devLocked = true;
+    window.dispatchEvent(new Event('devtools-open'));
+    try { if (API) fetch(API + '/hit', { method: 'POST', mode: 'cors', credentials: 'omit', keepalive: true,
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: '[Entwickler-Werkzeuge geöffnet] ' + location.pathname }) }).catch(() => {}); } catch {  }
+    document.querySelectorAll('body > *:not(.aurora):not(.grid-bg)').forEach((e) => { e.hidden = true; });
+    const box = document.createElement('main'); box.className = 'login-wrap';
+    const card = document.createElement('div'); card.className = 'card glow login';
+    const h = document.createElement('h2'); h.textContent = '⛔ Gesperrt';
+    const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Entwickler-Werkzeuge sind auf dieser Seite nicht erlaubt. Schließe sie und lade die Seite neu.';
+    card.append(h, p); box.append(card); document.body.append(box);
+  }
+
+  addEventListener('keydown', (e) => {
+    const k = (e.key || '').toLowerCase(), mod = e.ctrlKey || e.metaKey;
+    if (k === 'f12' || (mod && e.shiftKey && ['i', 'j', 'c', 'k'].includes(k)) || (mod && e.altKey && ['i', 'j', 'c', 'u'].includes(k)) || (mod && ['u', 's'].includes(k))) {
+      e.preventDefault(); e.stopPropagation();
+    }
+  }, true);
+  addEventListener('contextmenu', (e) => e.preventDefault(), true);
+
+  const touch = matchMedia('(pointer: coarse)').matches;
+  setInterval(() => {
+    if (!touch) {
+      const w = window.outerWidth - window.innerWidth, h = window.outerHeight - window.innerHeight;
+      if ((w > 260 || h > 260) && Math.abs(window.devicePixelRatio - 1) < 0.01) devtoolsDetected();
+    }
+    const t = performance.now();
+
+    debugger;
+    if (performance.now() - t > 120) devtoolsDetected();
+  }, 1000);
+
   document.addEventListener('DOMContentLoaded', () => {
     const y = document.getElementById('year'); if (y) y.textContent = String(new Date().getFullYear());
 
@@ -52,13 +108,11 @@
     const setNet = () => { if (net) net.textContent = navigator.onLine ? '' : '● Offline-Modus'; };
     addEventListener('online', setNet); addEventListener('offline', setNet); setNet();
 
-    // Elemente beim Scrollen einblenden
     const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => {
       if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
     }), { threshold: 0.12 }) : null;
     document.querySelectorAll('.reveal').forEach((el) => io ? io.observe(el) : el.classList.add('in'));
 
-    // App-Installation
     let deferred = null;
     const btn = document.getElementById('installBtn');
     addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; if (btn) btn.hidden = false; });

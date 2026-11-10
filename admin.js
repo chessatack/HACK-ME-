@@ -6,9 +6,8 @@
   const API = (typeof SITE_CONFIG !== 'undefined' && /^https:\/\/[a-z0-9.-]+\.supabase\.co\/functions\/v1\/[a-z0-9_-]+$/i.test(SITE_CONFIG.API) && !SITE_CONFIG.API.includes('DEIN-')) ? SITE_CONFIG.API : null;
   const IDLE_MS = 10 * 60 * 1000;
 
-  // Alles Sensible nur im Arbeitsspeicher – nie in localStorage/Cookies
-  let S = null; // { token, key, salt, iter, data }
-  let pick = null; // gewähltes Bild (ob richtig, weiß nur der Server)
+  let S = null;
+  let pick = null;
   let idleAt = 0, tick = null;
 
   const msg = (el, text, kind) => { el.textContent = text; el.className = 'msg' + (kind ? ' ' + kind : ''); };
@@ -22,16 +21,13 @@
       method: opts.method || 'GET', headers, mode: 'cors', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
-    let data = {}; try { data = await res.json(); } catch { /* leer */ }
+    let data = {}; try { data = await res.json(); } catch {  }
     if (res.status === 401 && S) { lock('Sitzung abgelaufen. Bitte neu anmelden.'); throw new Error('session'); }
     return { status: res.status, ok: res.ok, data };
   }
 
   if (!API) msg($('loginMsg'), 'Backend nicht eingerichtet: Adresse in config.js eintragen.', 'warn');
 
-  /* ======================= Schritt 1: Getränk wählen ======================= */
-  // Bilder liegen NICHT auf GitHub, sondern geschützt in der Datenbank.
-  // Der Server liefert sie nur an diese Seite (keine Direktlinks) – als Blob, ohne Dateiadresse.
   const blobs = new Map();
   async function loadImage(id) {
     if (blobs.has(id)) return blobs.get(id);
@@ -60,14 +56,11 @@
       grid.replaceChildren(...btns);
     } catch { msg($('loginMsg'), 'Bilder konnten nicht geladen werden.', 'err'); }
   }
-  // Rechtsklick / Ziehen / langes Drücken auf geschützten Bildern verhindern
+
   document.addEventListener('contextmenu', (e) => { if (e.target.closest?.('.protect, .pick')) e.preventDefault(); });
   document.addEventListener('dragstart', (e) => { if (e.target.tagName === 'IMG') e.preventDefault(); });
   $('backBtn').addEventListener('click', () => { pick = null; $('stepPw').hidden = true; $('stepPick').hidden = false; msg($('loginMsg'), ''); });
 
-  /* ======================= Falle ======================= */
-  // Köder-Passwörter (z. B. aus zugang-backup.json) tragen eine versteckte Prüfsumme.
-  // Wer so eins benutzt, hat die Falle geschluckt → Server sperrt dauerhaft.
   const BA = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   function isBait(pw) {
     if (pw.length < 9) return false;
@@ -79,7 +72,6 @@
     return pw.slice(-3) === tag;
   }
 
-  /* ======================= Schritt 2: Passwort ======================= */
   $('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!API) return;
@@ -117,7 +109,7 @@
       pick = null; $('stepPw').hidden = true; $('stepPick').hidden = false;
       $('doneImg').src = $('pickedImg').src;
       showSecret();
-      $('loginView').hidden = true; $('doneView').hidden = false; // „Geschafft du Bubis!“
+      $('loginView').hidden = true; $('doneView').hidden = false;
     } catch (err) {
       if (err.message !== 'session') msg(out, 'Verbindung fehlgeschlagen.', 'err');
     } finally {
@@ -135,12 +127,10 @@
     return { notes, updated: String(d?.updated ?? ''), secret: String(d?.secret ?? '') };
   }
 
-  // Geheimes Kennwort: steht nur verschlüsselt im Tresor, wird erst nach dem Entschlüsseln angezeigt
   function showSecret() {
     document.querySelectorAll('[data-secret]').forEach((e) => { e.textContent = S?.data.secret || '—'; });
   }
 
-  /* ======================= Dashboard ======================= */
   $('enterBtn').addEventListener('click', () => { if (S) showAdmin(); });
   function showAdmin() {
     $('loginView').hidden = true; $('doneView').hidden = true; $('adminView').hidden = false;
@@ -233,7 +223,6 @@
     }) : [el('span', 'Noch keine Daten', 'muted')]));
   }
 
-  /* ======================= Tabs ======================= */
   document.querySelectorAll('.tabs button').forEach((t) => t.addEventListener('click', () => {
     document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === t)));
     document.querySelectorAll('.tab').forEach((p) => { p.hidden = p.id !== t.dataset.tab; });
@@ -241,7 +230,6 @@
   $('refreshBtn').addEventListener('click', loadData);
   $('lockBtn').addEventListener('click', () => lock());
 
-  /* ======================= Notizen ======================= */
   function renderNotes() {
     const box = $('notes'); box.replaceChildren();
     S.data.notes.forEach((n, i) => {
@@ -268,7 +256,6 @@
     } finally { e.target.disabled = false; }
   });
 
-  /* ======================= Passwort ======================= */
   $('pwForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const out = $('pwMsg'), cur = $('curPw').value, a = $('newPw').value, b = $('newPw2').value;
@@ -293,9 +280,9 @@
     msg($('dataMsg'), r.ok ? '✓ Geleert' : 'Fehler', r.ok ? 'ok' : 'err'); loadData();
   });
 
-  /* ======================= Auto-Sperre ======================= */
   function bump() { idleAt = Date.now() + IDLE_MS; }
   ['pointerdown', 'keydown', 'scroll'].forEach((ev) => addEventListener(ev, () => { if (S) bump(); }, { passive: true }));
   addEventListener('pagehide', () => { if (S) lock(); });
+  addEventListener('devtools-open', () => { if (S) lock('Entwickler-Werkzeuge erkannt – abgemeldet.'); });
   if (API) loadGate();
 })();
