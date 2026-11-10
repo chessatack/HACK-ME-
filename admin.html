@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src https://*.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'; upgrade-insecure-requests">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="theme-color" content="#07090d">
+<meta name="color-scheme" content="dark light">
+<title>Admin</title>
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+<script src="vault-crypto.js" defer></script>
+<script src="admin.js" defer></script>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="grid-bg" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="./"><img src="icon-192.png" alt="">Admin</a>
+  <nav><span class="timer" id="timer"></span></nav>
+</header>
+
+<main>
+  <!-- ================= Login: Schritt 1 Bild, Schritt 2 Passwort ================= -->
+  <section id="loginView" class="login-wrap">
+    <div class="card glow login wide">
+      <div id="stepPick">
+        <p class="kicker">// Schritt 1 von 2</p>
+        <h2>Was trinkst du?</h2>
+        <p class="muted">Wähle das richtige Getränk. Falsche Wahl = Sperre.</p>
+        <div class="pick-grid protect" id="pickGrid"><div class="progress"><i></i></div></div>
+      </div>
+      <div id="stepPw" hidden>
+        <p class="kicker">// Schritt 2 von 2</p>
+        <div class="row"><img id="pickedImg" class="avatar protect" alt="" draggable="false"><h2>Passwort</h2></div>
+        <p class="muted">Nach 5 Fehlversuchen wird deine IP gesperrt.</p>
+        <form id="loginForm" autocomplete="off" novalidate>
+          <label for="pw">Passwort</label>
+          <input id="pw" type="password" autocomplete="current-password" required spellcheck="false" autocapitalize="off" maxlength="200">
+          <button class="btn primary" id="loginBtn" type="submit">Entsperren</button>
+          <button class="btn" id="backBtn" type="button">← Zurück</button>
+          <div class="progress" id="loginProgress" hidden><i></i></div>
+        </form>
+      </div>
+      <p id="loginMsg" class="msg" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <!-- ================= Geschafft ================= -->
+  <section id="doneView" class="login-wrap" hidden>
+    <div class="card glow login wide center">
+      <div class="duo protect"><img id="doneImg" alt="" draggable="false"></div>
+      <h1 class="grad yay">Geschafft du Bubis! 🎉</h1>
+      <div class="secret-box"><small>Dein Kennwort</small><b class="secret-word" data-secret></b></div>
+      <p class="muted">Steht hier nicht dein Kennwort? Dann bist du auf einer gefälschten Seite – sofort schließen!</p>
+      <button class="btn primary" id="enterBtn" type="button">Zum Dashboard →</button>
+    </div>
+  </section>
+
+  <!-- ================= Dashboard ================= -->
+  <section id="adminView" hidden>
+    <div class="dash-head">
+      <div><p class="kicker">// Dashboard</p><h1>Übersicht</h1><span class="secret-chip">🔑 <b data-secret></b></span></div>
+      <div class="row">
+        <button class="btn sm" id="refreshBtn" type="button">↻ Aktualisieren</button>
+        <button class="btn sm danger" id="lockBtn" type="button">Abmelden</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="card stat"><small>Aufrufe gesamt</small><b id="sTotal">–</b></div>
+      <div class="card stat"><small>Heute</small><b id="sToday">–</b></div>
+      <div class="card stat"><small>Eindeutige IPs</small><b id="sUnique">–</b></div>
+      <div class="card stat"><small>Fehlversuche</small><b id="sFails" class="bad">–</b></div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="tVisits">Besucher</button>
+      <button role="tab" aria-selected="false" data-tab="tSec">Sicherheit</button>
+      <button role="tab" aria-selected="false" data-tab="tNotes">Notizen</button>
+      <button role="tab" aria-selected="false" data-tab="tSettings">Einstellungen</button>
+    </div>
+
+    <div id="tVisits" class="tab">
+      <div class="two">
+        <div class="card"><h3>Länder</h3><div class="bars" id="countries"></div></div>
+        <div class="card"><h3>Geräte</h3><div class="bars" id="devices"></div></div>
+      </div>
+      <h3 class="block-sm">Letzte Besucher</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Zeit</th><th>IP</th><th>Land / Ort</th><th>Gerät</th><th>Seite</th><th>Anbieter</th><th></th></tr></thead>
+        <tbody id="visitRows"></tbody>
+      </table></div>
+    </div>
+
+    <div id="tSec" class="tab" hidden>
+      <div class="two">
+        <div class="card">
+          <h3>IP sperren</h3>
+          <form id="blockForm" autocomplete="off" novalidate>
+            <label for="blockIp">IP-Adresse</label>
+            <input id="blockIp" class="mono" inputmode="text" spellcheck="false" autocapitalize="off" placeholder="z. B. 203.0.113.7">
+            <label for="blockDur">Dauer</label>
+            <select id="blockDur">
+              <option value="1">1 Stunde</option>
+              <option value="24">24 Stunden</option>
+              <option value="168">7 Tage</option>
+              <option value="0" selected>Dauerhaft</option>
+            </select>
+            <button class="btn danger" type="submit">⛔ Sperren</button>
+            <p id="blockMsg" class="msg" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+        <div class="card"><h3>Gesperrte IPs</h3><div id="blocks" class="block-list muted">Keine</div></div>
+      </div>
+      <h3 class="block-sm">Login-Versuche</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Zeit</th><th>Ergebnis</th><th>IP</th><th>Land / Ort</th><th>Gerät</th><th></th></tr></thead>
+        <tbody id="attemptRows"></tbody>
+      </table></div>
+    </div>
+
+    <div id="tNotes" class="tab" hidden>
+      <div class="card">
+        <div class="row space"><h3>Private Notizen</h3><span class="muted mono" id="saveState"></span></div>
+        <p class="muted">Nur in deinem Browser entschlüsselt – nicht einmal der Server kann sie lesen.</p>
+        <div id="notes"></div>
+        <div class="row">
+          <button class="btn" id="addNote" type="button">+ Notiz</button>
+          <button class="btn primary" id="saveBtn" type="button">Speichern</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tSettings" class="tab" hidden>
+      <div class="two">
+        <div class="card">
+          <h3>Passwort ändern</h3>
+          <form id="pwForm" autocomplete="off" novalidate>
+            <label for="curPw">Aktuelles Passwort</label>
+            <input id="curPw" type="password" autocomplete="current-password" spellcheck="false" autocapitalize="off">
+            <label for="newPw">Neues Passwort (mind. 16 Zeichen)</label>
+            <input id="newPw" type="password" autocomplete="new-password" spellcheck="false" autocapitalize="off">
+            <label for="newPw2">Wiederholen</label>
+            <input id="newPw2" type="password" autocomplete="new-password" spellcheck="false" autocapitalize="off">
+            <button class="btn primary" type="submit">Passwort ändern</button>
+            <p id="pwMsg" class="msg" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Daten</h3>
+          <p class="muted">Besucher-Logs werden nach 30 Tagen automatisch gelöscht.</p>
+          <button class="btn danger" id="clearVisits" type="button">Besucher-Log jetzt leeren</button>
+          <p id="dataMsg" class="msg"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Meine Seite – schnell, sicher und als App installierbar.">
+<meta name="theme-color" content="#07090d">
+<meta name="color-scheme" content="dark light">
+<title>Meine Seite</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="grid-bg" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="./"><img src="icon-192.png" alt="">Meine Seite</a>
+  <nav>
+    <a href="#ueber">Über</a>
+    <a href="#projekte">Projekte</a>
+    <a href="#kontakt">Kontakt</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <span class="pill"><span class="dot"></span>Online · verschlüsselt · offline-fähig</span>
+    <h1>Ideen, die<br><span class="grad">ankommen.</span></h1>
+    <p class="lead">Hier steht dein Slogan. Eine Seite ohne Tracker, ohne Werbung – schnell auf jedem Gerät und als App installierbar.</p>
+    <div class="actions">
+      <a class="btn primary" href="#projekte">Projekte ansehen →</a>
+      <button class="btn" id="installBtn" type="button" hidden>⤓ Als App installieren</button>
+    </div>
+  </section>
+
+  <section id="ueber" class="block reveal">
+    <p class="kicker">// Über mich</p>
+    <h2>Kurz und knapp.</h2>
+    <p class="lead">Ersetze diesen Text in <code>index.html</code> durch deine Vorstellung: wer du bist, was du machst und was dich antreibt.</p>
+    <div class="features">
+      <div><b class="grad">100%</b><span>statisch &amp; schnell</span></div>
+      <div><b class="grad">0</b><span>Tracker oder Werbung</span></div>
+      <div><b class="grad">AES-256</b><span>verschlüsselter Admin</span></div>
+      <div><b class="grad">PWA</b><span>offline nutzbar</span></div>
+    </div>
+  </section>
+
+  <section id="projekte" class="block reveal">
+    <p class="kicker">// Projekte</p>
+    <h2>Woran ich arbeite.</h2>
+    <div class="cards">
+      <article class="card hover glow"><div class="icon">⚡</div><h3>Projekt Eins</h3><p class="muted">Kurze Beschreibung deines ersten Projekts.</p><span class="tag">Web</span><span class="tag">2026</span></article>
+      <article class="card hover"><div class="icon">🛰️</div><h3>Projekt Zwei</h3><p class="muted">Kurze Beschreibung deines zweiten Projekts.</p><span class="tag">App</span></article>
+      <article class="card hover"><div class="icon">🎨</div><h3>Projekt Drei</h3><p class="muted">Kurze Beschreibung deines dritten Projekts.</p><span class="tag">Design</span></article>
+    </div>
+  </section>
+
+  <section id="kontakt" class="block reveal">
+    <div class="card glow">
+      <p class="kicker">// Kontakt</p>
+      <h2>Lass uns reden.</h2>
+      <p class="muted">E-Mail: deine@adresse.de</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>© <span id="year">2026</span> Meine Seite</span>
+  <span id="netStatus"></span>
+  <span><a href="datenschutz.html">Datenschutz</a> · <a href="impressum.html">Impressum</a></span>
+</footer>
+
+<div class="banner" id="limitBanner" role="alert" hidden>
+  <span>Zu viele Aufrufe in kurzer Zeit. Bitte kurz warten.</span>
+</div>
+</body>
+</html>
